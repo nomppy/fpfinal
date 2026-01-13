@@ -1,0 +1,7 @@
+embedding:
+  model_name: "intfloat/multilingual-e5-small"
+  batch_size: 16
+  device: "cpu"
+  max_length: 512
+  cache_mode: "embeddings"  # embeddings | scores_only
+  embedding_dtype: "float16"
