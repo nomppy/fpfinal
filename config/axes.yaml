@@ -1,0 +1,23 @@
+security_axis:
+  name: security
+  seeds:
+    - "维护国家安全和社会稳定"
+    - "统筹安全与发展"
+    - "防范化解重大风险"
+    - "安全治理能力现代化"
+
+growth_axis:
+  name: growth
+  seeds:
+    - "高质量发展"
+    - "扩大对外开放"
+    - "发展新质生产力"
+    - "推进现代化建设"
+
+outward_axis:
+  name: outward
+  seeds:
+    - "积极参与全球治理"
+    - "推动构建人类命运共同体"
+    - "深化对外交流合作"
+    - "扩大对外开放合作"

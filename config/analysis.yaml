@@ -1,0 +1,26 @@
+analysis_start: "2012-01-01"
+analysis_end: "2025-12-31"
+binning: quarterly
+outward_percentile: 0.8
+security_top_decile: 0.9
+security_bottom_decile: 0.1
+growth_top_decile: 0.9
+growth_bottom_decile: 0.1
+sample_mode: false
+sample_year: 2017
+sample_quarter: "2017-Q1"
+keyness:
+  method: log_odds
+  ngram_min: 2
+  ngram_max: 5
+  top_n: 50
+  alpha: 0.01
+slogans:
+  min_len: 4
+  max_len: 10
+  top_n: 300
+  stoplist_path: config/stoplist_slogans.txt
+  curated_path: config/slogans_curated.txt
+cluster:
+  k: 30
+  random_state: 42
