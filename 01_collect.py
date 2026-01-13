@@ -35,7 +35,9 @@ def collect_docs(config_dir: str, analysis_start: str | None, analysis_end: str 
 
     docs_out = []
     for adapter in adapters:
-        for doc in adapter.list_doc_urls((start, end)):
+        docs = adapter.list_doc_urls((start, end))
+        print(f"[collect] {adapter.config['source_type']}: {len(docs)} docs in range")
+        for doc in docs:
             url = doc["url"]
             doc_id = sha1_text(url)[:16]
             raw_html = adapter.fetch(url, force=force)

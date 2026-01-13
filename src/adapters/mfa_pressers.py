@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import random
 from pathlib import Path
 from typing import Any, Dict, List
 from urllib.parse import urljoin
@@ -12,18 +13,59 @@ from bs4 import BeautifulSoup
 from src.utils import ensure_dir, normalize_ws, sha1_text
 
 
-QA_Q_RE = re.compile(r"^(问|记者)：?\s*")
-QA_A_RE = re.compile(r"^(答|发言人)：?\s*")
+QA_Q_RE = re.compile(r"^(?:问|记者(?:问|提问)?)[:：]?\s*")
+QA_A_RE = re.compile(r"^(?:答|发言人(?:答)?)[:：]?\s*")
 
 
 class MFAPressersAdapter:
     def __init__(self, config: Dict[str, Any], cache_dir: Path):
         self.config = config
         self.cache_dir = cache_dir
+        self.max_docs = self._normalize_limit(config.get("max_docs"))
+        self.max_docs_per_year = self._normalize_limit(config.get("max_docs_per_year"))
+        self.sample_years = self._normalize_sample_years(config.get("sample_years"))
+        self.sample_strategy = self._normalize_sample_strategy(config.get("sample_strategy", "even"))
+        self.sample_seed = self._normalize_sample_seed(config.get("sample_seed"))
         ensure_dir(cache_dir)
+
+    def _normalize_limit(self, value: Any) -> int | None:
+        if value is None:
+            return None
+        try:
+            value_int = int(value)
+        except (TypeError, ValueError):
+            return None
+        return value_int if value_int > 0 else None
+
+    def _normalize_sample_years(self, value: Any) -> List[str]:
+        if not value:
+            return []
+        years: List[str] = []
+        for item in value:
+            year = str(item).strip()
+            if re.match(r"^20\d{2}$", year):
+                years.append(year)
+        return sorted(set(years))
+
+    def _normalize_sample_strategy(self, value: Any) -> str:
+        strategy = str(value or "even").strip().lower()
+        if strategy in {"even", "random"}:
+            return strategy
+        return "even"
+
+    def _normalize_sample_seed(self, value: Any) -> int | None:
+        if value is None or value == "":
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
 
     def list_doc_urls(self, date_range: tuple[str, str]) -> List[Dict[str, Any]]:
         start, end = date_range
+        if self.sample_years:
+            start = f"{min(self.sample_years)}-01-01"
+            end = f"{max(self.sample_years)}-12-31"
         docs: List[Dict[str, Any]] = []
         link_patterns = self.config.get("link_patterns", [])
         seen_urls: set[str] = set()
@@ -41,17 +83,64 @@ class MFAPressersAdapter:
                     html = self.fetch(page_url, force=False, allow_404=True)
                     if not html:
                         break
-                    docs.extend(self._extract_docs(html, page_url, link_patterns, seen_urls))
+                    page_docs = self._extract_docs(html, page_url, link_patterns, seen_urls)
+                    docs.extend(page_docs)
+                    if self._page_reaches_start(page_docs, start):
+                        break
 
         docs.extend(self.config.get("fallback_urls", []))
-        return [d for d in docs if d.get("date") and start <= d["date"] <= end]
+        filtered = [d for d in docs if d.get("date") and start <= d["date"] <= end]
+        if self.sample_years:
+            year_set = set(self.sample_years)
+            filtered = [d for d in filtered if d["date"][:4] in year_set]
+        if self.max_docs_per_year:
+            filtered = self._sample_docs_by_year(filtered, self.max_docs_per_year)
+        if self.max_docs:
+            filtered.sort(key=lambda d: d.get("date", ""), reverse=True)
+            return filtered[: self.max_docs]
+        return filtered
 
     def _infer_date(self, text: str, href: str) -> str:
-        match = re.search(r"(20\d{2})[-./](\d{1,2})[-./](\d{1,2})", text + " " + href)
+        haystack = f"{text} {href}"
+        match = re.search(r"(20\d{2})[-./](\d{1,2})[-./](\d{1,2})", haystack)
+        if not match:
+            match = re.search(r"(20\d{2})年\s*(\d{1,2})月\s*(\d{1,2})日", haystack)
+        if not match:
+            match = re.search(r"(20\d{2})(\d{2})(\d{2})", haystack)
         if not match:
             return ""
         y, m, d = match.groups()
         return f"{y}-{int(m):02d}-{int(d):02d}"
+
+    def _page_reaches_start(self, page_docs: List[Dict[str, Any]], start: str) -> bool:
+        if not page_docs:
+            return False
+        oldest = min(d["date"] for d in page_docs if d.get("date"))
+        return oldest < start if oldest else False
+
+    def _sample_docs_by_year(self, docs: List[Dict[str, Any]], limit: int) -> List[Dict[str, Any]]:
+        by_year: Dict[str, List[Dict[str, Any]]] = {}
+        for doc in docs:
+            year = doc["date"][:4]
+            by_year.setdefault(year, []).append(doc)
+        sampled: List[Dict[str, Any]] = []
+        rng = random.Random(self.sample_seed)
+        for year, items in by_year.items():
+            items.sort(key=lambda d: d.get("date", ""))
+            if len(items) <= limit:
+                sampled.extend(items)
+                continue
+            if limit == 1:
+                sampled.append(items[-1])
+                continue
+            if self.sample_strategy == "random":
+                sampled.extend(rng.sample(items, limit))
+                continue
+            step = (len(items) - 1) / (limit - 1)
+            indices = [int(round(i * step)) for i in range(limit)]
+            sampled.extend([items[idx] for idx in indices])
+        sampled.sort(key=lambda d: d.get("date", ""))
+        return sampled
 
     def fetch(self, url: str, force: bool = False, allow_404: bool = False) -> str:
         cache_path = self.cache_dir / f"{sha1_text(url)}.html"
@@ -145,7 +234,7 @@ class MFAPressersAdapter:
         base = base_entry["base"]
         first_page = base_entry.get("first_page", "index.shtml")
         page_pattern = base_entry.get("page_pattern", "index_{page}.shtml")
-        max_pages = base_entry.get("max_pages") or self.config.get("max_pages", 200)
+        max_pages = base_entry.get("max_pages") or self.config.get("max_pages", 10)
         return [
             f"{base.rstrip('/')}/{(first_page if page == 0 else page_pattern.format(page=page)).lstrip('/')}"
             for page in range(max_pages)
@@ -160,23 +249,55 @@ class MFAPressersAdapter:
     ) -> List[Dict[str, Any]]:
         soup = BeautifulSoup(html, "lxml")
         docs: List[Dict[str, Any]] = []
-        for link in soup.find_all("a", href=True):
-            href = link["href"]
-            text = normalize_ws(link.get_text(" "))
+        for link in self._candidate_links(soup):
+            href = link.get("href", "")
             abs_url = urljoin(page_url, href)
             if link_patterns and not any(pat in abs_url for pat in link_patterns):
                 continue
-            date = self._infer_date(text, abs_url)
+            date = self._infer_date_from_context(link, abs_url)
             if not date:
                 continue
             if abs_url in seen_urls:
                 continue
             seen_urls.add(abs_url)
             docs.append({
-                "title": text,
+                "title": normalize_ws(link.get_text(" ")),
                 "date": date,
                 "language": "zh",
                 "url": abs_url,
                 "canonical_url": abs_url,
             })
         return docs
+
+    def _candidate_links(self, soup: BeautifulSoup) -> List[Any]:
+        links = soup.select("ul.list1 li a[href]")
+        if links:
+            return links
+        links = soup.select(".newsList a[href]")
+        if links:
+            return links
+        return soup.find_all("a", href=True)
+
+    def _infer_date_from_context(self, link: Any, abs_url: str) -> str:
+        candidates = []
+        text = normalize_ws(link.get_text(" "))
+        if text:
+            candidates.append(text)
+        title_attr = normalize_ws(link.get("title", ""))
+        if title_attr:
+            candidates.append(title_attr)
+        parent = link.find_parent("li") or link.parent
+        if parent is not None:
+            parent_text = normalize_ws(parent.get_text(" "))
+            if parent_text and parent_text not in candidates:
+                candidates.append(parent_text)
+            for sibling in list(link.previous_siblings) + list(link.next_siblings):
+                if getattr(sibling, "get_text", None):
+                    sibling_text = normalize_ws(sibling.get_text(" "))
+                    if sibling_text and sibling_text not in candidates:
+                        candidates.append(sibling_text)
+        for candidate in candidates:
+            date = self._infer_date(candidate, abs_url)
+            if date:
+                return date
+        return ""

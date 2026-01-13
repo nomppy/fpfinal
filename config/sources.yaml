@@ -29,6 +29,15 @@ mfa_pressers:
   source_type: mfa_presser
   source_org: mfa
   language: zh
+  max_docs: null  # cap number of pressers collected (newest first); set null for no cap
+  max_docs_per_year: 60  # sample per year to keep collection manageable
+  # sample_years: [2012, 2015, 2018, 2021, 2024]
+  # sample_strategy: even  # even (spread across year) or random
+  # sample_seed: 42  # set for reproducible random samples
+  max_pages: 120
+  link_patterns:
+    - "/fyrbt_674889/"
+    - "/jzhsl_673025/"
   collect_range_default:
     start: "2012-01-01"
     end: "2025-12-31"
