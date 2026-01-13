@@ -4,8 +4,6 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from src.adapters.central_conference import CentralConferenceAdapter
-from src.adapters.mfa_pressers import MFAPressersAdapter
 from src.adapters.party_reports import PartyReportsAdapter
 from src.utils import (
     ensure_dir,
@@ -30,26 +28,16 @@ def collect_docs(config_dir: str, analysis_start: str | None, analysis_end: str 
 
     adapters = [
         PartyReportsAdapter(sources["party_reports"], cache_dir / "party"),
-        MFAPressersAdapter(sources["mfa_pressers"], cache_dir / "mfa"),
-        CentralConferenceAdapter(sources["central_conferences"], cache_dir / "conference"),
+        # MFAPressersAdapter(sources["mfa_pressers"], cache_dir / "mfa"),
+        # CentralConferenceAdapter(sources["central_conferences"], cache_dir / "conference"),
     ]
 
     docs_out = []
     for adapter in adapters:
         for doc in adapter.list_doc_urls((start, end)):
-            urls = doc.get("urls") or [doc["url"]]
-            doc_id = doc.get("doc_id") or sha1_text(doc.get("canonical_url", urls[0]))[:16]
-            raw_html = None
-            used_url = None
-            for candidate in urls:
-                try:
-                    raw_html = adapter.fetch(candidate, force=force)
-                    used_url = candidate
-                    break
-                except Exception as exc:
-                    print(f"[collect] Failed to fetch {candidate}: {exc}")
-            if raw_html is None:
-                continue
+            url = doc["url"]
+            doc_id = sha1_text(url)[:16]
+            raw_html = adapter.fetch(url, force=force)
             raw_path = raw_dir / f"{doc_id}.html"
             raw_path.write_text(raw_html, encoding="utf-8")
             parsed = adapter.parse(raw_html)
@@ -62,9 +50,9 @@ def collect_docs(config_dir: str, analysis_start: str | None, analysis_end: str 
                 "source_org": adapter.config["source_org"],
                 "title": parsed["title"],
                 "date": parsed["date"],
-                "language": doc.get("language", adapter.config.get("language", "zh")),
-                "url": used_url or urls[0],
-                "canonical_url": doc.get("canonical_url", used_url or urls[0]),
+                "language": doc.get("language", "zh"),
+                "url": url,
+                "canonical_url": doc.get("canonical_url", url),
                 "raw_path": str(raw_path),
                 "clean_text": parsed["text"],
                 "segments": [],

@@ -30,15 +30,11 @@ def extract_candidates(texts: List[str], n_min: int, n_max: int, stoplist: set[s
     return pd.DataFrame(ranked, columns=["slogan", "frequency"])
 
 
-def _is_mfa_source(source_type: str) -> bool:
-    return source_type in {"mfa_presser", "mfa_pressers"}
-
-
 def slogan_metrics(rows: List[Dict[str, any]], slogans: List[str]) -> pd.DataFrame:
     slogans = [s for s in slogans if s]
     records = []
     for row in rows:
-        bin_id = quarterly_bin(row["date"]) if _is_mfa_source(row["source_type"]) else row["date"]
+        bin_id = quarterly_bin(row["date"]) if row["source_type"] == "mfa_presser" else row["date"]
         for slogan in slogans:
             count = row["text"].count(slogan)
             if count:
@@ -91,3 +87,4 @@ def entropy_from_counts(counts: List[int]) -> float:
         p = c / total
         ent -= p * math.log(p + 1e-12)
     return ent
+

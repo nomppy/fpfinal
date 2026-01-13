@@ -4,11 +4,9 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from src.adapters.central_conference import CentralConferenceAdapter
-from src.adapters.mfa_pressers import MFAPressersAdapter
 from src.adapters.party_reports import PartyReportsAdapter
 from src.segment import build_segments, merge_document
-from src.utils import jsonl_read, jsonl_write, load_config_bundle, save_json
+from src.utils import ensure_utf8, jsonl_read, jsonl_write, load_config_bundle, load_json, save_json
 
 
 def segment_docs(config_dir: str) -> None:
@@ -20,16 +18,19 @@ def segment_docs(config_dir: str) -> None:
     segments_dir.mkdir(parents=True, exist_ok=True)
 
     adapters = {
-        "party_reports": PartyReportsAdapter(sources["party_reports"], cache_dir / "party"),
-        "mfa_pressers": MFAPressersAdapter(sources["mfa_pressers"], cache_dir / "mfa"),
-        "central_conference": CentralConferenceAdapter(sources["central_conferences"], cache_dir / "conference"),
+        "party_report": PartyReportsAdapter(sources["party_reports"], cache_dir / "party"),
+        # "mfa_presser": MFAPressersAdapter(sources["mfa_pressers"], cache_dir / "mfa"),
+        # "central_conference": CentralConferenceAdapter(sources["central_conferences"], cache_dir / "conference"),
     }
 
     docs = jsonl_read(parsed_dir / "docs.jsonl")
     out_docs = []
     for doc in docs:
+        if doc["source_type"] not in adapters:
+            continue
         adapter = adapters[doc["source_type"]]
-        raw_html = Path(doc["raw_path"]).read_text(encoding="utf-8")
+        raw_bytes = Path(doc["raw_path"]).read_bytes()
+        raw_html = ensure_utf8(raw_bytes.decode("utf-8", errors="ignore"))
         parsed = adapter.parse(raw_html)
         segments = adapter.segment(parsed["text"])
         segments = [

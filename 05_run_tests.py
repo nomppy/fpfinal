@@ -66,7 +66,7 @@ def run_trends(rows: list[dict]) -> None:
     trend_df.to_csv(output_dir / "q1_trend_quarterly.csv", index=False, encoding="utf-8")
 
     fig, ax = plt.subplots(figsize=(10, 5))
-    mfa = trend_df[trend_df["source_type"].isin(["mfa_presser", "mfa_pressers"])]
+    mfa = trend_df[trend_df["source_type"] == "mfa_presser"]
     ax.plot(mfa["bin"], mfa["security_mean"], label="security")
     ax.plot(mfa["bin"], mfa["growth_mean"], label="growth")
     ax.set_xlabel("Quarter")
@@ -104,7 +104,7 @@ def run_slogans(rows: list[dict], analysis_cfg: dict) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     stoplist = load_stoplist(analysis_cfg["slogans"]["stoplist_path"])
     curated = load_curated(analysis_cfg["slogans"]["curated_path"])
-    party_texts = [r["text"] for r in rows if r["source_type"] in {"party_report", "party_reports"}]
+    party_texts = [r["text"] for r in rows if r["source_type"] == "party_report"]
     candidates = extract_candidates(
         party_texts,
         analysis_cfg["slogans"]["min_len"],
@@ -124,6 +124,7 @@ def run_elasticity(rows: list[dict], analysis_cfg: dict) -> None:
         return
     all_embeddings = []
     bin_map = {}
+    segment_index_map = {}
     for doc_id in {r["doc_id"] for r in rows}:
         cache = embeddings_path / f"{doc_id}.npz"
         if not cache.exists():
@@ -134,7 +135,9 @@ def run_elasticity(rows: list[dict], analysis_cfg: dict) -> None:
         all_embeddings.append(emb)
         doc_rows = [r for r in rows if r["doc_id"] == doc_id and r["segment_type"] != "heading"]
         for idx, row in enumerate(doc_rows):
-            bin_map[start_idx + idx] = row["date"]
+            global_idx = start_idx + idx
+            bin_map[global_idx] = row["date"]
+            segment_index_map[row["segment_id"]] = global_idx
     if not all_embeddings:
         return
     matrix = np.vstack(all_embeddings)
@@ -142,7 +145,7 @@ def run_elasticity(rows: list[dict], analysis_cfg: dict) -> None:
 
     stoplist = load_stoplist(analysis_cfg["slogans"]["stoplist_path"])
     curated = load_curated(analysis_cfg["slogans"]["curated_path"])
-    party_texts = [r["text"] for r in rows if r["source_type"] in {"party_report", "party_reports"}]
+    party_texts = [r["text"] for r in rows if r["source_type"] == "party_report"]
     candidates = extract_candidates(
         party_texts,
         analysis_cfg["slogans"]["min_len"],
@@ -153,7 +156,10 @@ def run_elasticity(rows: list[dict], analysis_cfg: dict) -> None:
     slogans = curated if curated else candidates["slogan"].head(50).tolist()
 
     slogan_map = slogan_presence(rows, slogans)
-    slogan_indices = {s: [rows.index(r) for r in rows if r["segment_id"] in ids] for s, ids in slogan_map.items()}
+    slogan_indices = {
+        slogan: [segment_index_map[seg_id] for seg_id in ids if seg_id in segment_index_map]
+        for slogan, ids in slogan_map.items()
+    }
     summary, series = slogan_entropy(slogan_indices, labels, bin_map)
     summary.to_csv(Path("outputs/tables") / "slogan_elasticity.csv", index=False, encoding="utf-8")
     series.to_csv(Path("outputs/tables") / "slogan_entropy_timeseries.csv", index=False, encoding="utf-8")

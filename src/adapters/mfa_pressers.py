@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import re
-from urllib.parse import urljoin
 from pathlib import Path
 from typing import Any, Dict, List
+from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
@@ -23,51 +23,27 @@ class MFAPressersAdapter:
 
     def list_doc_urls(self, date_range: tuple[str, str]) -> List[Dict[str, Any]]:
         start, end = date_range
-        docs = []
-        seen_urls = set()
-        for listing in self.config.get("listing_bases", []):
-            base = listing["base"]
-            first_page = listing["first_page"]
-            page_pattern = listing["page_pattern"]
-            empty_pages = 0
-            for page in range(0, 200):
-                page_name = first_page if page == 0 else page_pattern.format(page=page)
-                page_url = urljoin(base, page_name)
-                try:
-                    html = self.fetch(page_url, force=False)
-                except requests.RequestException:
-                    break
-                soup = BeautifulSoup(html, "lxml")
-                page_docs = 0
-                for link in soup.find_all("a", href=True):
-                    href = link["href"]
-                    text = normalize_ws(link.get_text(" "))
-                    doc_date = self._infer_date(text, href)
-                    if not doc_date:
-                        continue
-                    if not (start <= doc_date <= end):
-                        continue
-                    abs_url = urljoin(base, href)
-                    if abs_url in seen_urls:
-                        continue
-                    seen_urls.add(abs_url)
-                    docs.append(
-                        {
-                            "title": text,
-                            "date": doc_date,
-                            "language": self.config.get("language", "zh"),
-                            "urls": [abs_url],
-                            "canonical_url": abs_url,
-                        }
-                    )
-                    page_docs += 1
-                if page_docs == 0:
-                    empty_pages += 1
-                else:
-                    empty_pages = 0
-                if empty_pages >= 2:
-                    break
-        return docs
+        docs: List[Dict[str, Any]] = []
+        link_patterns = self.config.get("link_patterns", [])
+        seen_urls: set[str] = set()
+
+        index_pages = self.config.get("index_pages", [])
+        if index_pages:
+            for page in index_pages:
+                if str(page.get("year", "")) < start[:4] or str(page.get("year", "")) > end[:4]:
+                    continue
+                html = self.fetch(page["url"], force=False)
+                docs.extend(self._extract_docs(html, page["url"], link_patterns, seen_urls))
+        else:
+            for base in self.config.get("listing_bases", []):
+                for page_url in self._iter_listing_pages(base):
+                    html = self.fetch(page_url, force=False, allow_404=True)
+                    if not html:
+                        break
+                    docs.extend(self._extract_docs(html, page_url, link_patterns, seen_urls))
+
+        docs.extend(self.config.get("fallback_urls", []))
+        return [d for d in docs if d.get("date") and start <= d["date"] <= end]
 
     def _infer_date(self, text: str, href: str) -> str:
         match = re.search(r"(20\d{2})[-./](\d{1,2})[-./](\d{1,2})", text + " " + href)
@@ -76,11 +52,13 @@ class MFAPressersAdapter:
         y, m, d = match.groups()
         return f"{y}-{int(m):02d}-{int(d):02d}"
 
-    def fetch(self, url: str, force: bool = False) -> str:
+    def fetch(self, url: str, force: bool = False, allow_404: bool = False) -> str:
         cache_path = self.cache_dir / f"{sha1_text(url)}.html"
         if cache_path.exists() and not force:
             return cache_path.read_text(encoding="utf-8")
         resp = requests.get(url, timeout=30)
+        if allow_404 and resp.status_code == 404:
+            return ""
         resp.raise_for_status()
         html = resp.text
         cache_path.write_text(html, encoding="utf-8")
@@ -147,3 +125,43 @@ class MFAPressersAdapter:
 
     def normalize(self, segment_text: str) -> str:
         return normalize_ws(segment_text)
+
+    def _iter_listing_pages(self, base_entry: Dict[str, Any]) -> List[str]:
+        base = base_entry["base"]
+        first_page = base_entry.get("first_page", "index.shtml")
+        page_pattern = base_entry.get("page_pattern", "index_{page}.shtml")
+        max_pages = base_entry.get("max_pages") or self.config.get("max_pages", 200)
+        return [
+            f"{base.rstrip('/')}/{(first_page if page == 0 else page_pattern.format(page=page)).lstrip('/')}"
+            for page in range(max_pages)
+        ]
+
+    def _extract_docs(
+        self,
+        html: str,
+        page_url: str,
+        link_patterns: List[str],
+        seen_urls: set[str],
+    ) -> List[Dict[str, Any]]:
+        soup = BeautifulSoup(html, "lxml")
+        docs: List[Dict[str, Any]] = []
+        for link in soup.find_all("a", href=True):
+            href = link["href"]
+            text = normalize_ws(link.get_text(" "))
+            abs_url = urljoin(page_url, href)
+            if link_patterns and not any(pat in abs_url for pat in link_patterns):
+                continue
+            date = self._infer_date(text, abs_url)
+            if not date:
+                continue
+            if abs_url in seen_urls:
+                continue
+            seen_urls.add(abs_url)
+            docs.append({
+                "title": text,
+                "date": date,
+                "language": "zh",
+                "url": abs_url,
+                "canonical_url": abs_url,
+            })
+        return docs

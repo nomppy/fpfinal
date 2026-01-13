@@ -18,19 +18,28 @@ class CentralConferenceAdapter:
     def list_doc_urls(self, date_range: tuple[str, str]) -> List[Dict[str, Any]]:
         start, end = date_range
         docs = []
-        for item in self.config.get("docs", []):
+        for item in self._normalize_docs():
             if start <= item["date"] <= end:
-                urls = [item["canonical_url"]] + item.get("mirrors", [])
-                docs.append(
-                    {
-                        "doc_id": item.get("doc_id"),
-                        "title": item.get("title", ""),
-                        "date": item.get("date", ""),
-                        "language": item.get("language", self.config.get("language", "zh")),
-                        "canonical_url": item.get("canonical_url"),
-                        "urls": urls,
-                    }
-                )
+                docs.append(item)
+        return docs
+
+    def _normalize_docs(self) -> List[Dict[str, Any]]:
+        raw_docs = self.config.get("urls") or self.config.get("docs") or []
+        docs: List[Dict[str, Any]] = []
+        for item in raw_docs:
+            url = item.get("url")
+            canonical_url = item.get("canonical_url")
+            mirrors = item.get("mirrors") or []
+            if not url:
+                url = canonical_url or (mirrors[0] if mirrors else "")
+            if not canonical_url:
+                canonical_url = url
+            if not url:
+                continue
+            doc = dict(item)
+            doc["url"] = url
+            doc["canonical_url"] = canonical_url
+            docs.append(doc)
         return docs
 
     def fetch(self, url: str, force: bool = False) -> str:

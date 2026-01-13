@@ -25,14 +25,10 @@ def cohens_d(x: List[float], y: List[float]) -> float:
     return float((np.mean(x) - np.mean(y)) / np.sqrt(pooled))
 
 
-def _is_mfa_source(source_type: str) -> bool:
-    return source_type in {"mfa_presser", "mfa_pressers"}
-
-
 def run_coupling(rows: List[Dict[str, Any]]) -> pd.DataFrame:
     records = []
     for row in rows:
-        if not _is_mfa_source(row["source_type"]):
+        if row["source_type"] != "mfa_presser":
             continue
         bin_id = quarterly_bin(row["date"])
         records.append(
@@ -65,3 +61,4 @@ def run_coupling(rows: List[Dict[str, Any]]) -> pd.DataFrame:
             }
         )
     return pd.DataFrame(out).sort_values("bin")
+

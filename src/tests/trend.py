@@ -20,16 +20,12 @@ def length_weighted_mean(values: List[float], weights: List[int]) -> float:
     return float((v * w).sum() / w.sum()) if w.sum() > 0 else 0.0
 
 
-def _is_mfa_source(source_type: str) -> bool:
-    return source_type in {"mfa_presser", "mfa_pressers"}
-
-
 def run_trend(rows: List[Dict[str, Any]]) -> pd.DataFrame:
     records = []
     for row in rows:
         if not row["scores"].get("is_outward"):
             continue
-        bin_id = quarterly_bin(row["date"]) if _is_mfa_source(row["source_type"]) else row["date"]
+        bin_id = quarterly_bin(row["date"]) if row["source_type"] == "mfa_presser" else row["date"]
         records.append(
             {
                 "bin": bin_id,
@@ -54,3 +50,4 @@ def run_trend(rows: List[Dict[str, Any]]) -> pd.DataFrame:
             }
         )
     return pd.DataFrame(out).sort_values(["bin", "source_type"])
+

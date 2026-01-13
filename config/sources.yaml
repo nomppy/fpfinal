@@ -25,48 +25,48 @@ party_reports:
         - "https://cpc.people.com.cn/20th/n1/2022/1026/c448334-32551867.html"
         - "https://language.chinadaily.com.cn/a/202210/25/WS635a3223a310fd2b29e7edc8.html"
 
-mfa_pressers:
-  source_type: mfa_pressers
-  source_org: mfa
-  language: zh
-  collect_range_default:
-    start: "2012-01-01"
-    end: "2025-12-31"
-  listing_bases:
-    - base: "https://www.mfa.gov.cn/web/wjdt_674879/fyrbt_674889/"
-      first_page: "index.shtml"
-      page_pattern: "index_{page}.shtml"
-    - base: "https://www.mfa.gov.cn/wjdt_674879/fyrbt_674889/"
-      first_page: "index.shtml"
-      page_pattern: "index_{page}.shtml"
-    - base: "https://www.fmprc.gov.cn/web/fyrbt_673021/jzhsl_673025/"
-      first_page: "index.shtml"
-      page_pattern: "index_{page}.shtml"
-    - base: "https://www.fmprc.gov.cn/web//fyrbt_673021/jzhsl_673025/"
-      first_page: "index.shtml"
-      page_pattern: "index_{page}.shtml"
+# mfa_pressers:
+#   source_type: mfa_pressers
+#   source_org: mfa
+#   language: zh
+#   collect_range_default:
+#     start: "2012-01-01"
+#     end: "2025-12-31"
+#   listing_bases:
+#     - base: "https://www.mfa.gov.cn/web/wjdt_674879/fyrbt_674889/"
+#       first_page: "index.shtml"
+#       page_pattern: "index_{page}.shtml"
+#     - base: "https://www.mfa.gov.cn/wjdt_674879/fyrbt_674889/"
+#       first_page: "index.shtml"
+#       page_pattern: "index_{page}.shtml"
+#     - base: "https://www.fmprc.gov.cn/web/fyrbt_673021/jzhsl_673025/"
+#       first_page: "index.shtml"
+#       page_pattern: "index_{page}.shtml"
+#     - base: "https://www.fmprc.gov.cn/web//fyrbt_673021/jzhsl_673025/"
+#       first_page: "index.shtml"
+#       page_pattern: "index_{page}.shtml"
 
-central_conferences:
-  source_type: central_conference
-  source_org: xinhua
-  language: zh
-  docs:
-    - doc_id: cfawc_2014
-      date: "2014-11-29"
-      title: "中央外事工作会议在京举行"
-      canonical_url: "https://www.xinhuanet.com/politics/2014-11/29/c_1113457723.htm"
-      mirrors:
-        - "https://cpc.people.com.cn/n/2014/1130/c64094-26119225.html"
-    - doc_id: cfawc_2018
-      date: "2018-06-23"
-      title: "中央外事工作会议在京举行（努力开创中国特色大国外交新局面）"
-      canonical_url: "https://www.xinhuanet.com/politics/2018-06/23/c_1123025806.htm"
-      mirrors:
-        - "https://politics.people.com.cn/n1/2018/0624/c1001-30078760.html"
-    - doc_id: cfawc_2023
-      date: "2023-12-28"
-      title: "中央外事工作会议在北京举行"
-      canonical_url: "https://www.news.cn/20231228/0e5a68949de74c4f9780deaedd0365f2/c.html"
-      mirrors:
-        - "https://politics.people.com.cn/n1/2023/1228/c1024-40148809.html"
-        - "https://www.mfa.gov.cn/zyxw/202312/t20231228_11214409.shtml"
+# central_conferences:
+#   source_type: central_conference
+#   source_org: xinhua
+#   language: zh
+#   docs:
+#     - doc_id: cfawc_2014
+#       date: "2014-11-29"
+#       title: "中央外事工作会议在京举行"
+#       canonical_url: "https://www.xinhuanet.com/politics/2014-11/29/c_1113457723.htm"
+#       mirrors:
+#         - "https://cpc.people.com.cn/n/2014/1130/c64094-26119225.html"
+#     - doc_id: cfawc_2018
+#       date: "2018-06-23"
+#       title: "中央外事工作会议在京举行（努力开创中国特色大国外交新局面）"
+#       canonical_url: "https://www.xinhuanet.com/politics/2018-06/23/c_1123025806.htm"
+#       mirrors:
+#         - "https://politics.people.com.cn/n1/2018/0624/c1001-30078760.html"
+#     - doc_id: cfawc_2023
+#       date: "2023-12-28"
+#       title: "中央外事工作会议在北京举行"
+#       canonical_url: "https://www.news.cn/20231228/0e5a68949de74c4f9780deaedd0365f2/c.html"
+#       mirrors:
+#         - "https://politics.people.com.cn/n1/2023/1228/c1024-40148809.html"
+#         - "https://www.mfa.gov.cn/zyxw/202312/t20231228_11214409.shtml"
