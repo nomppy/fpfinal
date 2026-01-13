@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 from urllib.parse import urljoin
 
+import chardet
 import requests
 from bs4 import BeautifulSoup
 
@@ -55,14 +56,28 @@ class MFAPressersAdapter:
     def fetch(self, url: str, force: bool = False, allow_404: bool = False) -> str:
         cache_path = self.cache_dir / f"{sha1_text(url)}.html"
         if cache_path.exists() and not force:
-            return cache_path.read_text(encoding="utf-8")
+            return self._read_with_encoding_detection(cache_path)
         resp = requests.get(url, timeout=30)
         if allow_404 and resp.status_code == 404:
             return ""
         resp.raise_for_status()
-        html = resp.text
+        detected = chardet.detect(resp.content)
+        encoding = detected.get("encoding") or "utf-8"
+        try:
+            html = resp.content.decode(encoding)
+        except (UnicodeDecodeError, LookupError):
+            html = resp.text
         cache_path.write_text(html, encoding="utf-8")
         return html
+
+    def _read_with_encoding_detection(self, path: Path) -> str:
+        raw_bytes = path.read_bytes()
+        detected = chardet.detect(raw_bytes)
+        encoding = detected.get("encoding") or "utf-8"
+        try:
+            return raw_bytes.decode(encoding)
+        except (UnicodeDecodeError, LookupError):
+            return raw_bytes.decode("utf-8", errors="replace")
 
     def parse(self, raw: str) -> Dict[str, Any]:
         soup = BeautifulSoup(raw, "lxml")

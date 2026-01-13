@@ -1,5 +1,5 @@
 party_reports:
-  source_type: party_reports
+  source_type: party_report
   source_org: cpc
   language: zh
   docs:
@@ -25,26 +25,26 @@ party_reports:
         - "https://cpc.people.com.cn/20th/n1/2022/1026/c448334-32551867.html"
         - "https://language.chinadaily.com.cn/a/202210/25/WS635a3223a310fd2b29e7edc8.html"
 
-# mfa_pressers:
-#   source_type: mfa_pressers
-#   source_org: mfa
-#   language: zh
-#   collect_range_default:
-#     start: "2012-01-01"
-#     end: "2025-12-31"
-#   listing_bases:
-#     - base: "https://www.mfa.gov.cn/web/wjdt_674879/fyrbt_674889/"
-#       first_page: "index.shtml"
-#       page_pattern: "index_{page}.shtml"
-#     - base: "https://www.mfa.gov.cn/wjdt_674879/fyrbt_674889/"
-#       first_page: "index.shtml"
-#       page_pattern: "index_{page}.shtml"
-#     - base: "https://www.fmprc.gov.cn/web/fyrbt_673021/jzhsl_673025/"
-#       first_page: "index.shtml"
-#       page_pattern: "index_{page}.shtml"
-#     - base: "https://www.fmprc.gov.cn/web//fyrbt_673021/jzhsl_673025/"
-#       first_page: "index.shtml"
-#       page_pattern: "index_{page}.shtml"
+mfa_pressers:
+  source_type: mfa_presser
+  source_org: mfa
+  language: zh
+  collect_range_default:
+    start: "2012-01-01"
+    end: "2025-12-31"
+  listing_bases:
+    - base: "https://www.mfa.gov.cn/web/wjdt_674879/fyrbt_674889/"
+      first_page: "index.shtml"
+      page_pattern: "index_{page}.shtml"
+    - base: "https://www.mfa.gov.cn/wjdt_674879/fyrbt_674889/"
+      first_page: "index.shtml"
+      page_pattern: "index_{page}.shtml"
+    - base: "https://www.fmprc.gov.cn/web/fyrbt_673021/jzhsl_673025/"
+      first_page: "index.shtml"
+      page_pattern: "index_{page}.shtml"
+    - base: "https://www.fmprc.gov.cn/web//fyrbt_673021/jzhsl_673025/"
+      first_page: "index.shtml"
+      page_pattern: "index_{page}.shtml"
 
 # central_conferences:
 #   source_type: central_conference

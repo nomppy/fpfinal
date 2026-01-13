@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from src.adapters.mfa_pressers import MFAPressersAdapter
 from src.adapters.party_reports import PartyReportsAdapter
 from src.utils import (
     ensure_dir,
@@ -28,7 +29,7 @@ def collect_docs(config_dir: str, analysis_start: str | None, analysis_end: str 
 
     adapters = [
         PartyReportsAdapter(sources["party_reports"], cache_dir / "party"),
-        # MFAPressersAdapter(sources["mfa_pressers"], cache_dir / "mfa"),
+        MFAPressersAdapter(sources["mfa_pressers"], cache_dir / "mfa"),
         # CentralConferenceAdapter(sources["central_conferences"], cache_dir / "conference"),
     ]
 

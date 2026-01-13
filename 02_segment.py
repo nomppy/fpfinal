@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from src.adapters.mfa_pressers import MFAPressersAdapter
 from src.adapters.party_reports import PartyReportsAdapter
 from src.segment import build_segments, merge_document
 from src.utils import ensure_utf8, jsonl_read, jsonl_write, load_config_bundle, load_json, save_json
@@ -19,7 +20,7 @@ def segment_docs(config_dir: str) -> None:
 
     adapters = {
         "party_report": PartyReportsAdapter(sources["party_reports"], cache_dir / "party"),
-        # "mfa_presser": MFAPressersAdapter(sources["mfa_pressers"], cache_dir / "mfa"),
+        "mfa_presser": MFAPressersAdapter(sources["mfa_pressers"], cache_dir / "mfa"),
         # "central_conference": CentralConferenceAdapter(sources["central_conferences"], cache_dir / "conference"),
     }
 
