@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
+import chardet
 import yaml
 
 
@@ -96,8 +97,18 @@ def load_curated(path: str | Path) -> List[str]:
         return [line.strip() for line in f if line.strip() and not line.strip().startswith("#")]
 
 
-def ensure_utf8(text: str) -> str:
-    return text.encode("utf-8", errors="ignore").decode("utf-8", errors="ignore")
+def ensure_utf8(data: str | bytes) -> str:
+    """Return a UTF-8 string, detecting encoding when given bytes."""
+    if isinstance(data, bytes):
+        detected = chardet.detect(data)
+        encoding = detected.get("encoding") or "utf-8"
+        try:
+            return data.decode(encoding)
+        except (UnicodeDecodeError, LookupError):
+            return data.decode("utf-8", errors="replace")
+    if isinstance(data, str):
+        return data
+    return str(data)
 
 
 def list_jsonl(path: str | Path) -> List[Dict[str, Any]]:

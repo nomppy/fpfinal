@@ -30,7 +30,7 @@ def segment_docs(config_dir: str) -> None:
             continue
         adapter = adapters[doc["source_type"]]
         raw_bytes = Path(doc["raw_path"]).read_bytes()
-        raw_html = ensure_utf8(raw_bytes.decode("utf-8", errors="ignore"))
+        raw_html = ensure_utf8(raw_bytes)
         parsed = adapter.parse(raw_html)
         segments = adapter.segment(parsed["text"])
         segments = [
